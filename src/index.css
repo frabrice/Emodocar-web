@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply text-gray-900;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-6 py-2 rounded-full font-medium transition-colors duration-200;
+  }
+  
+  .btn-primary {
+    @apply bg-[#06347C] text-white hover:bg-[#052960];
+  }
+  
+  .btn-outline {
+    @apply border-2 border-[#06347C] text-[#06347C] hover:bg-[#06347C] hover:text-white;
+  }
+}
