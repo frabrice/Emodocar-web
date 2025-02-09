@@ -1,7 +1,10 @@
 import React from 'react';
 import { Facebook, Twitter, Instagram, Mail, Phone } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Footer = () => {
+  const navigate = useNavigate();
+
   return (
     <footer className="bg-[#06347C] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -19,9 +22,31 @@ const Footer = () => {
           <div>
             <h3 className="font-semibold text-lg mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              <li><a href="/" className="hover:text-gray-300 transition-colors">Home</a></li>
-              <li><a href="/about" className="hover:text-gray-300 transition-colors">About Us</a></li>
-              <li><a href="/contact" className="hover:text-gray-300 transition-colors">Contact Us</a></li>
+              <li>
+                <Link to="/" className="hover:text-gray-300 transition-colors">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" className="hover:text-gray-300 transition-colors">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-gray-300 transition-colors">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="hover:text-gray-300 transition-colors">
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="hover:text-gray-300 transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
@@ -54,10 +79,25 @@ const Footer = () => {
         </div>
         <div className="mt-8 pt-8 border-t border-white/10 text-center">
           <p>&copy; {new Date().getFullYear()} EmodoCar. All rights reserved.</p>
+          <div className="mt-4 flex justify-center space-x-4">
+            <button 
+              onClick={() => navigate('/terms')} 
+              className="hover:text-gray-300 transition-colors"
+            >
+              Terms & Conditions
+            </button>
+            <span>•</span>
+            <button 
+              onClick={() => navigate('/privacy')} 
+              className="hover:text-gray-300 transition-colors"
+            >
+              Privacy Policy
+            </button>
+          </div>
         </div>
       </div>
     </footer>
   );
 };
 
-export default Footer
+export default Footer;
