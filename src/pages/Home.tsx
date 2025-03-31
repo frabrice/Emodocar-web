@@ -1,31 +1,61 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Shield, Clock, Users, Car, Smartphone, CreditCard, Search, Settings, DollarSign, Star, List, CheckCircle2, Award, Globe, Clock3, Building2, UserCircle2, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React from "react";
+import { motion } from "framer-motion";
+import {
+  Shield,
+  Clock,
+  Users,
+  Car,
+  Smartphone,
+  CreditCard,
+  Search,
+  Settings,
+  DollarSign,
+  Star,
+  List,
+  CheckCircle2,
+  Award,
+  Globe,
+  Clock3,
+  Building2,
+  UserCircle2,
+  ArrowRight,
+} from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Home = () => {
+
+
+
   const features = [
     {
       icon: <Smartphone className="h-6 w-6 text-[#06347C]" />,
-      title: 'Easy Booking',
-      description: 'Rent vehicles with just a few taps on your phone'
+      title: "Easy Booking",
+      description: "Rent vehicles with just a few taps on your phone",
     },
     {
       icon: <Search className="h-6 w-6 text-[#06347C]" />,
-      title: 'Wide Range of Options',
-      description: "From motorcycles to luxury cars, we've got it all"
+      title: "Wide Range of Options",
+      description: "From motorcycles to luxury cars, we've got it all",
     },
     {
       icon: <CreditCard className="h-6 w-6 text-[#06347C]" />,
-      title: 'Flexible Payments',
-      description: 'Secure transactions through Flutterwave and multiple payment methods'
+      title: "Flexible Payments",
+      description:
+        "Secure transactions through Flutterwave and multiple payment methods",
     },
     {
       icon: <Settings className="h-6 w-6 text-[#06347C]" />,
-      title: 'Seamless Experience',
-      description: 'Optimized app with a user-friendly interface'
-    }
+      title: "Seamless Experience",
+      description: "Optimized app with a user-friendly interface",
+    },
   ];
+
+   const handleDownloadClickAndriod = () => {
+     window.open(
+       "https://play.google.com/store/apps/details?id=com.emodocar.e_modo_car",
+       "_blank"
+     );
+   };
 
   return (
     <div className="overflow-hidden">
@@ -65,7 +95,8 @@ const Home = () => {
                 Rent Smart, <span className="text-[#06347C]">Ride Easy</span>
               </h1>
               <p className="text-xl mb-8 text-gray-600">
-                Your trusted platform for seamless vehicle rentals – cars, motorcycles, and more!
+                Your trusted platform for seamless vehicle rentals – cars,
+                motorcycles, and more!
               </p>
               <div className="flex flex-wrap gap-4">
                 <button className="bg-[#06347C] text-white px-8 py-3 rounded-full font-semibold hover:bg-[#052960] transition-colors">
@@ -97,12 +128,16 @@ const Home = () => {
               <div className="bg-white p-8 rounded-2xl shadow-xl relative z-10">
                 <div className="absolute -top-4 -left-4 bg-[#06347C]/10 w-24 h-24 rounded-full blur-2xl"></div>
                 <div className="relative">
-                  <h2 className="text-4xl font-bold text-gray-900 mb-6">Who We Are</h2>
+                  <h2 className="text-4xl font-bold text-gray-900 mb-6">
+                    Who We Are
+                  </h2>
                   <p className="text-gray-600 text-lg leading-relaxed">
-                    EmodoCar is revolutionizing the vehicle rental industry by creating seamless connections 
-                    between renters and vehicle owners. Our platform is built on the foundation of trust, 
-                    innovation, and exceptional service. We're committed to providing a secure, efficient, 
-                    and user-friendly experience for both vehicle owners and renters.
+                    EmodoCar is revolutionizing the vehicle rental industry by
+                    creating seamless connections between renters and vehicle
+                    owners. Our platform is built on the foundation of trust,
+                    innovation, and exceptional service. We're committed to
+                    providing a secure, efficient, and user-friendly experience
+                    for both vehicle owners and renters.
                   </p>
                 </div>
               </div>
@@ -114,17 +149,23 @@ const Home = () => {
               className="space-y-6"
             >
               <div className="bg-white p-8 rounded-2xl shadow-xl border-l-4 border-[#06347C]">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Our Mission</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                  Our Mission
+                </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  To make vehicle rentals accessible, secure, and enjoyable for everyone while empowering 
-                  vehicle owners to maximize their assets.
+                  To make vehicle rentals accessible, secure, and enjoyable for
+                  everyone while empowering vehicle owners to maximize their
+                  assets.
                 </p>
               </div>
               <div className="bg-white p-8 rounded-2xl shadow-xl border-l-4 border-[#06347C]">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Our Vision</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                  Our Vision
+                </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  To become Africa's leading platform for vehicle rentals, known for innovation, 
-                  reliability, and exceptional customer experience.
+                  To become Africa's leading platform for vehicle rentals, known
+                  for innovation, reliability, and exceptional customer
+                  experience.
                 </p>
               </div>
             </motion.div>
@@ -141,7 +182,9 @@ const Home = () => {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">What We Offer</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              What We Offer
+            </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
               Discover why thousands choose EmodoCar for their rental needs.
             </p>
@@ -158,7 +201,9 @@ const Home = () => {
                 <div className="bg-blue-50 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {feature.title}
+                </h3>
                 <p className="text-gray-600">{feature.description}</p>
               </motion.div>
             ))}
@@ -194,15 +239,16 @@ const Home = () => {
                 <h3 className="text-2xl font-bold">For Car Rental Companies</h3>
               </div>
               <p className="text-lg mb-8 opacity-90">
-                Expand your car rental business with EmodoCar. List your fleet on our platform
-                and reach more customers while streamlining your rental operations.
+                Expand your car rental business with EmodoCar. List your fleet
+                on our platform and reach more customers while streamlining your
+                rental operations.
               </p>
               <div className="space-y-4">
                 {[
-                  'Efficient fleet management system',
-                  'Secure payment processing',
-                  'Advanced booking management',
-                  'Dedicated business support'
+                  "Efficient fleet management system",
+                  "Secure payment processing",
+                  "Advanced booking management",
+                  "Dedicated business support",
                 ].map((item, index) => (
                   <motion.div
                     key={index}
@@ -232,16 +278,17 @@ const Home = () => {
                 <h3 className="text-2xl font-bold">For Car Users</h3>
               </div>
               <p className="text-lg mb-8 opacity-90">
-                Find your perfect ride with ease. From daily commutes to special occasions,
-                we have the right vehicle for every need at competitive prices.
+                Find your perfect ride with ease. From daily commutes to special
+                occasions, we have the right vehicle for every need at
+                competitive prices.
               </p>
               <div className="space-y-4">
                 {[
-                  'Wide range of vehicles',
-                  'Flexible rental periods',
-                  'Transparent pricing',
-                  'Verified vehicles',
-                  '24/7 roadside assistance'
+                  "Wide range of vehicles",
+                  "Flexible rental periods",
+                  "Transparent pricing",
+                  "Verified vehicles",
+                  "24/7 roadside assistance",
                 ].map((item, index) => (
                   <motion.div
                     key={index}
@@ -269,9 +316,12 @@ const Home = () => {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">See EmodoCar in Action</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              See EmodoCar in Action
+            </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Experience our intuitive and user-friendly mobile application designed for both renters and vehicle owners.
+              Experience our intuitive and user-friendly mobile application
+              designed for both renters and vehicle owners.
             </p>
           </motion.div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -314,13 +364,17 @@ const Home = () => {
           >
             <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
             <p className="mb-8 max-w-2xl mx-auto">
-              Join thousands of satisfied users who've discovered a better way to rent vehicles. Download the EmodoCar app today!
+              Join thousands of satisfied users who've discovered a better way
+              to rent vehicles. Download the EmodoCar app today!
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <button className="bg-white text-[#06347C] px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors">
                 Download for iOS
               </button>
-              <button className="bg-white text-[#06347C] px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors">
+              <button
+                className="bg-white text-[#06347C] px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors"
+                onClick={handleDownloadClickAndriod}
+              >
                 Download for Android
               </button>
             </div>
