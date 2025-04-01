@@ -23,9 +23,6 @@ import {
 import { Link } from "react-router-dom";
 
 const Home = () => {
-
-
-
   const features = [
     {
       icon: <Smartphone className="h-6 w-6 text-[#06347C]" />,
@@ -50,12 +47,12 @@ const Home = () => {
     },
   ];
 
-   const handleDownloadClickAndriod = () => {
-     window.open(
-       "https://play.google.com/store/apps/details?id=com.emodocar.e_modo_car",
-       "_blank"
-     );
-   };
+  const handleDownloadClickAndriod = () => {
+    window.open(
+      "https://play.google.com/store/apps/details?id=com.emodocar.e_modo_car",
+      "_blank"
+    );
+  };
 
   return (
     <div className="overflow-hidden">
@@ -99,7 +96,12 @@ const Home = () => {
                 motorcycles, and more!
               </p>
               <div className="flex flex-wrap gap-4">
-                <button className="bg-[#06347C] text-white px-8 py-3 rounded-full font-semibold hover:bg-[#052960] transition-colors">
+                <button
+                  className="bg-[#06347C] text-white px-8 py-3 rounded-full font-semibold hover:bg-[#052960] transition-colors"
+                  onClick={() => {
+                    window.open("https://linktr.ee/emodocar", "_blank");
+                  }}
+                >
                   Download App
                 </button>
                 <Link
