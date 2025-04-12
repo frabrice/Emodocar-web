@@ -49,7 +49,14 @@ const Home = () => {
 
   const handleDownloadClickAndriod = () => {
     window.open(
-      "https://play.google.com/store/apps/details?id=com.emodocar.e_modo_car",
+      "https://play.google.com/store/apps/details?id=com.emodocar.e_modo_car&pli=1",
+      "_blank"
+    );
+  };
+
+  const handleDownloadClickAIOS = () => {
+    window.open(
+      "https://apps.apple.com/eg/app/emodocar/id6744017921",
       "_blank"
     );
   };
@@ -370,7 +377,10 @@ const Home = () => {
               to rent vehicles. Download the EmodoCar app today!
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <button className="bg-white text-[#06347C] px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors">
+              <button
+                className="bg-white text-[#06347C] px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors"
+                onClick={handleDownloadClickAIOS}
+              >
                 Download for iOS
               </button>
               <button
