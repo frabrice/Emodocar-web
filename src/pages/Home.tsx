@@ -1,24 +1,14 @@
-import React from "react";
 import { motion } from "framer-motion";
 import {
   Shield,
-  Clock,
-  Users,
-  Car,
   Smartphone,
   CreditCard,
   Search,
   Settings,
-  DollarSign,
   Star,
-  List,
   CheckCircle2,
-  Award,
-  Globe,
-  Clock3,
   Building2,
   UserCircle2,
-  ArrowRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
