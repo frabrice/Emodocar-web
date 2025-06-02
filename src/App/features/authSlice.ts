@@ -7,11 +7,6 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
-const initialState: AuthState = {
-  userInfo: null,
-  isAuthenticated: false,
-};
-
 
 const getUserFromStorage = (): LoginResponseType | null => {
   const userInfoString = localStorage.getItem("userInfo");
