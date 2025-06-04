@@ -6,7 +6,7 @@ const Sidebar = () => {
     <div className="bg-white shadow-md w-64 min-h-screen flex-shrink-0">
       <nav className="mt-8">
         <NavLink
-          to="/"
+          to="/dashboard"
           end
           className={({ isActive }) =>
             `flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50 ${

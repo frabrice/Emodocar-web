@@ -2,16 +2,17 @@ import { apiSlice } from "../apiEntry";
 
 export const api = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    listVehicles: builder.query({
+    listVehicles: builder.mutation({
       query: ({ page, limit }) => ({
         url: `/vehicle/search?page=${page}&limit=${limit}`,
-        method: "GET",
+        method: "POST",
+        body: {},
       }),
     }),
     // Search by plate number
     searchByVehiclesByPlateNumber: builder.query({
       query: (plate) => ({
-        url: `/vehicles/${plate}`,
+        url: `/vehicle/${plate}`,
         method: "GET",
       }),
     }),
@@ -35,8 +36,8 @@ export const api = apiSlice.injectEndpoints({
 });
 
 export const {
-    useLazyListVehiclesQuery,
-    useLazySearchByVehiclesByPlateNumberQuery,
-    useDeleteVehicleMutation,
-    useListBookingsMutation,
+  useListVehiclesMutation,
+  useLazySearchByVehiclesByPlateNumberQuery,
+  useDeleteVehicleMutation,
+  useListBookingsMutation,
 } = api;

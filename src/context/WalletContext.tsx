@@ -277,15 +277,12 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     }
 
     try {
-      // Prepare API request body
-      const transferData = {
-        email: userEmail,
-        amount: amount,
-        remarks: note || "Transfer to user",
-      };
-
-      // Call the API
-      const response = await transferFundsApi(transferData).unwrap();
+      // // Prepare API request body
+      // const transferData = {
+      //   email: userEmail,
+      //   amount: amount,
+      //   remarks: note || "Transfer to user",
+      // };
 
       // Create transaction record for local state
       const newTransaction: Transaction = {
@@ -296,7 +293,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
         note: note || "Transfer to user",
         adminId: user?.user?.id || "1",
         type: "transfer",
-        status: "completed", 
+        status: "completed",
       };
 
       // Update local state
