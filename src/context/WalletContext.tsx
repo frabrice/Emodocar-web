@@ -9,16 +9,27 @@ import { Transaction, WalletState } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "./AuthContext";
 import { useNotification } from "./NotificationContext";
-import { useLazyWalletBalanceQuery } from "@/App/api/company";
+import {
+  useLazyWalletBalanceQuery,
+  useMakeDepositMutation,
+  useLazyVerifyTransactionQuery,
+} from "@/App/api/company";
 
 interface WalletContextType {
   walletState: WalletState;
-  depositFunds: (amount: number) => void;
+  depositFunds: (amount: number, currency?: string) => Promise<void>;
   transferFunds: (userEmail: string, amount: number, note: string) => boolean;
   getTransactionHistory: () => Transaction[];
+  verifyPayment: (
+    tx_ref: string,
+    status: string,
+    transaction_id: string
+  ) => Promise<boolean>;
   isLoading: boolean;
   error: string | null;
   refreshWallet: () => void;
+  isDepositLoading: boolean;
+  isVerifyingPayment: boolean;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -40,11 +51,12 @@ const transformApiHistoryToTransactions = (
   apiHistory: any[]
 ): Transaction[] => {
   return apiHistory.map((item) => ({
-    // Generate unique ID since API doesn't provide one
+    id: uuidv4(), // Generate unique ID since API doesn't provide one
     date: new Date(item.createdAt),
     userEmail: "N/A",
     amount: item.amount,
     note: item.remarks || "No remarks",
+    adminId: "system",
     type:
       item.action === "deposit"
         ? "deposit"
@@ -59,9 +71,13 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   const { user } = useAuth();
   const { addNotification } = useNotification();
 
-  // RTK Query hook
+  // RTK Query hooks
   const [walletBalance, { data: walletData, isLoading, error }] =
     useLazyWalletBalanceQuery();
+  const [makeDeposit, { isLoading: isDepositLoading }] =
+    useMakeDepositMutation();
+  const [verifyTransaction, { isLoading: isVerifyingPayment }] =
+    useLazyVerifyTransactionQuery();
 
   // Local state
   const [walletState, setWalletState] = useState<WalletState>({
@@ -107,33 +123,128 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     walletBalance(undefined);
   };
 
-  const depositFunds = (amount: number) => {
+  const verifyPayment = async (
+    tx_ref: string,
+    status: string,
+    transaction_id: string
+  ): Promise<boolean> => {
+    try {
+      const verificationResult = await verifyTransaction({
+        tx_ref,
+        status,
+        transaction_id,
+      }).unwrap();
+
+      if (verificationResult.success || status === "successful") {
+        addNotification(
+          "success",
+          "Payment verified successfully! Your wallet has been updated."
+        );
+
+        // Update local transaction status if we can find it
+        setWalletState((prev) => ({
+          ...prev,
+          transactions: prev.transactions.map((tx) =>
+            tx.note.includes(tx_ref) || tx.id === tx_ref
+              ? { ...tx, status: "completed" }
+              : tx
+          ),
+        }));
+
+        // Refresh wallet data to get updated balance
+        setTimeout(() => refreshWallet(), 1000);
+        return true;
+      } else {
+        addNotification(
+          "error",
+          "Payment verification failed. Please contact support if you believe this is an error."
+        );
+        return false;
+      }
+    } catch (error: any) {
+      console.error("Payment verification error:", error);
+
+      let errorMessage = "Failed to verify payment";
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      addNotification("error", errorMessage);
+      return false;
+    }
+  };
+
+  const depositFunds = async (amount: number, currency: string = "RWF") => {
     if (amount <= 0) {
       addNotification("error", "Amount must be greater than zero");
       return;
     }
 
-    // TODO: Replace with actual API call for deposit
-    // For now, this will add to local state but won't persist
-    const newTransaction: Transaction = {
-      id: uuidv4(),
-      date: new Date(),
-      userEmail: "admin@emodocar.com",
-      amount,
-      note: "Admin wallet deposit",
-      adminId: user?.user?.id || "1",
-      type: "deposit",
-    };
+    try {
+      // Get current domain for redirect URL
+      const baseUrl = window.location.origin;
+      const redirectUrl = `${baseUrl}/dashboard`;
 
-    setWalletState((prev) => ({
-      balance: prev.balance + amount,
-      transactions: [newTransaction, ...prev.transactions],
-    }));
+      const depositData = {
+        amount,
+        currency,
+        redirectUrl,
+      };
 
-    addNotification("success", `Successfully deposited $${amount.toFixed(2)}`);
+      const response = await makeDeposit(depositData).unwrap();
 
-    // Refresh from API to get updated data
-    setTimeout(() => refreshWallet(), 1000);
+      // Check if response contains a payment link
+      if (response.link || response.paymentUrl || response.url) {
+        const paymentLink =
+          response.link || response.paymentUrl || response.url;
+
+        // Open payment link in new tab
+        window.open(paymentLink, "_blank", "noopener,noreferrer");
+
+        addNotification(
+          "success",
+          "Payment link opened. Complete your deposit in the new tab."
+        );
+
+        // Add pending transaction to local state
+        const newTransaction: Transaction = {
+          id: uuidv4(),
+          date: new Date(),
+          userEmail: user?.user?.email?.value || "admin@emodocar.com",
+          amount,
+          note: `Deposit of ${amount} ${currency}`,
+          adminId: user?.user?.id || "1",
+          type: "deposit",
+          status: "pending",
+        };
+
+        setWalletState((prev) => ({
+          ...prev, // Keep current balance since deposit is pending
+          transactions: [newTransaction, ...prev.transactions],
+        }));
+
+        // Refresh wallet data after a delay to check for updates
+        setTimeout(() => {
+          refreshWallet();
+        }, 2000);
+      } else {
+        addNotification("error", "Payment link not received from server");
+      }
+    } catch (error: any) {
+      console.error("Deposit error:", error);
+
+      let errorMessage = "Failed to initiate deposit";
+
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      addNotification("error", errorMessage);
+    }
   };
 
   const transferFunds = (
@@ -158,7 +269,6 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     }
 
     // TODO: Replace with actual API call for transfer
-    // For now, this will update local state but won't persist
     const newTransaction: Transaction = {
       id: uuidv4(),
       date: new Date(),
@@ -167,6 +277,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       note: note || "Transfer to user",
       adminId: user?.user?.id || "1",
       type: "transfer",
+      status: "pending",
     };
 
     setWalletState((prev) => ({
@@ -195,9 +306,12 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
         depositFunds,
         transferFunds,
         getTransactionHistory,
+        verifyPayment,
         isLoading,
         error: apiError,
         refreshWallet,
+        isDepositLoading,
+        isVerifyingPayment,
       }}
     >
       {children}
