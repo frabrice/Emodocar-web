@@ -13,12 +13,17 @@ import {
   useLazyWalletBalanceQuery,
   useMakeDepositMutation,
   useLazyVerifyTransactionQuery,
+  useTransferFundsMutation,
 } from "@/App/api/company";
 
 interface WalletContextType {
   walletState: WalletState;
   depositFunds: (amount: number, currency?: string) => Promise<void>;
-  transferFunds: (userEmail: string, amount: number, note: string) => boolean;
+  transferFunds: (
+    userEmail: string,
+    amount: number,
+    note: string
+  ) => Promise<boolean>;
   getTransactionHistory: () => Transaction[];
   verifyPayment: (
     tx_ref: string,
@@ -30,6 +35,7 @@ interface WalletContextType {
   refreshWallet: () => void;
   isDepositLoading: boolean;
   isVerifyingPayment: boolean;
+  isTransferLoading: boolean;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -78,6 +84,8 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     useMakeDepositMutation();
   const [verifyTransaction, { isLoading: isVerifyingPayment }] =
     useLazyVerifyTransactionQuery();
+  const [transferFundsApi, { isLoading: isTransferLoading }] =
+    useTransferFundsMutation();
 
   // Local state
   const [walletState, setWalletState] = useState<WalletState>({
@@ -247,11 +255,11 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     }
   };
 
-  const transferFunds = (
+  const transferFunds = async (
     userEmail: string,
     amount: number,
     note: string
-  ): boolean => {
+  ): Promise<boolean> => {
     if (amount <= 0) {
       addNotification("error", "Amount must be greater than zero");
       return false;
@@ -268,31 +276,57 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       return false;
     }
 
-    // TODO: Replace with actual API call for transfer
-    const newTransaction: Transaction = {
-      id: uuidv4(),
-      date: new Date(),
-      userEmail,
-      amount,
-      note: note || "Transfer to user",
-      adminId: user?.user?.id || "1",
-      type: "transfer",
-      status: "pending",
-    };
+    try {
+      // Prepare API request body
+      const transferData = {
+        email: userEmail,
+        amount: amount,
+        remarks: note || "Transfer to user",
+      };
 
-    setWalletState((prev) => ({
-      balance: prev.balance - amount,
-      transactions: [newTransaction, ...prev.transactions],
-    }));
+      // Call the API
+      const response = await transferFundsApi(transferData).unwrap();
 
-    addNotification(
-      "success",
-      `Successfully transferred $${amount.toFixed(2)} to ${userEmail}`
-    );
+      // Create transaction record for local state
+      const newTransaction: Transaction = {
+        id: uuidv4(),
+        date: new Date(),
+        userEmail,
+        amount,
+        note: note || "Transfer to user",
+        adminId: user?.user?.id || "1",
+        type: "transfer",
+        status: "completed", 
+      };
 
-    // Refresh from API to get updated data
-    setTimeout(() => refreshWallet(), 1000);
-    return true;
+      // Update local state
+      setWalletState((prev) => ({
+        balance: prev.balance - amount,
+        transactions: [newTransaction, ...prev.transactions],
+      }));
+
+      addNotification(
+        "success",
+        `Successfully transferred $${amount.toFixed(2)} to ${userEmail}`
+      );
+
+      // Refresh wallet data to get updated balance from server
+      setTimeout(() => refreshWallet(), 1000);
+
+      return true;
+    } catch (error: any) {
+      console.error("Transfer error:", error);
+
+      let errorMessage = "Failed to transfer funds";
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      addNotification("error", errorMessage);
+      return false;
+    }
   };
 
   const getTransactionHistory = () => {
@@ -312,6 +346,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
         refreshWallet,
         isDepositLoading,
         isVerifyingPayment,
+        isTransferLoading,
       }}
     >
       {children}
