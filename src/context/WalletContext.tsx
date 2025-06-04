@@ -1,14 +1,24 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Transaction, WalletState } from '../types';
-import { v4 as uuidv4 } from 'uuid';
-import { useAuth } from './AuthContext';
-import { useNotification } from './NotificationContext';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { Transaction, WalletState } from "../types";
+import { v4 as uuidv4 } from "uuid";
+import { useAuth } from "./AuthContext";
+import { useNotification } from "./NotificationContext";
+import { useLazyWalletBalanceQuery } from "@/App/api/company";
 
 interface WalletContextType {
   walletState: WalletState;
   depositFunds: (amount: number) => void;
   transferFunds: (userEmail: string, amount: number, note: string) => boolean;
   getTransactionHistory: () => Transaction[];
+  isLoading: boolean;
+  error: string | null;
+  refreshWallet: () => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -16,7 +26,7 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 export const useWallet = () => {
   const context = useContext(WalletContext);
   if (context === undefined) {
-    throw new Error('useWallet must be used within a WalletProvider');
+    throw new Error("useWallet must be used within a WalletProvider");
   }
   return context;
 };
@@ -25,92 +35,152 @@ interface WalletProviderProps {
   children: ReactNode;
 }
 
+// Helper function to transform API history to Transaction format
+const transformApiHistoryToTransactions = (
+  apiHistory: any[]
+): Transaction[] => {
+  return apiHistory.map((item) => ({
+    // Generate unique ID since API doesn't provide one
+    date: new Date(item.createdAt),
+    userEmail: "N/A",
+    amount: item.amount,
+    note: item.remarks || "No remarks",
+    type:
+      item.action === "deposit"
+        ? "deposit"
+        : item.action === "init"
+        ? "deposit"
+        : "transfer",
+    status: item.status || "pending",
+  }));
+};
+
 export const WalletProvider = ({ children }: WalletProviderProps) => {
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
   const { addNotification } = useNotification();
-  
-  // Initial state with mock data
+
+  // RTK Query hook
+  const [walletBalance, { data: walletData, isLoading, error }] =
+    useLazyWalletBalanceQuery();
+
+  // Local state
   const [walletState, setWalletState] = useState<WalletState>({
-    balance: 5000, // Initial balance in USD
-    transactions: [
-      {
-        id: uuidv4(),
-        date: new Date(2023, 5, 15),
-        userEmail: 'user1@example.com',
-        amount: 300,
-        note: 'Monthly transfer',
-        adminId: '1',
-        type: 'transfer'
-      },
-      {
-        id: uuidv4(),
-        date: new Date(2023, 5, 10),
-        userEmail: 'admin@emodocar.com',
-        amount: 1000,
-        note: 'Initial deposit',
-        adminId: '1',
-        type: 'deposit'
-      }
-    ]
+    balance: 0,
+    transactions: [],
   });
+
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  // Load wallet data on mount
+  useEffect(() => {
+    refreshWallet();
+  }, []);
+
+  // Update local state when API data changes
+  useEffect(() => {
+    if (walletData?.wallet) {
+      const transformedTransactions = transformApiHistoryToTransactions(
+        walletData.wallet.history || []
+      );
+
+      setWalletState({
+        balance: walletData.wallet.balance || 0,
+        transactions: transformedTransactions,
+      });
+      setApiError(null);
+    }
+  }, [walletData]);
+
+  // Handle API errors
+  useEffect(() => {
+    if (error) {
+      const errorMessage =
+        "status" in error
+          ? `API Error: ${error.status}`
+          : "Network error occurred";
+      setApiError(errorMessage);
+      addNotification("error", errorMessage);
+    }
+  }, [error, addNotification]);
+
+  const refreshWallet = () => {
+    walletBalance(undefined);
+  };
 
   const depositFunds = (amount: number) => {
     if (amount <= 0) {
-      addNotification('error', 'Amount must be greater than zero');
+      addNotification("error", "Amount must be greater than zero");
       return;
     }
 
+    // TODO: Replace with actual API call for deposit
+    // For now, this will add to local state but won't persist
     const newTransaction: Transaction = {
       id: uuidv4(),
       date: new Date(),
-      userEmail: currentUser?.email || 'admin@emodocar.com',
+      userEmail: "admin@emodocar.com",
       amount,
-      note: 'Admin wallet deposit',
-      adminId: currentUser?.id || '1',
-      type: 'deposit'
+      note: "Admin wallet deposit",
+      adminId: user?.user?.id || "1",
+      type: "deposit",
     };
 
-    setWalletState(prev => ({
+    setWalletState((prev) => ({
       balance: prev.balance + amount,
-      transactions: [newTransaction, ...prev.transactions]
+      transactions: [newTransaction, ...prev.transactions],
     }));
 
-    addNotification('success', `Successfully deposited $${amount.toFixed(2)}`);
+    addNotification("success", `Successfully deposited $${amount.toFixed(2)}`);
+
+    // Refresh from API to get updated data
+    setTimeout(() => refreshWallet(), 1000);
   };
 
-  const transferFunds = (userEmail: string, amount: number, note: string): boolean => {
+  const transferFunds = (
+    userEmail: string,
+    amount: number,
+    note: string
+  ): boolean => {
     if (amount <= 0) {
-      addNotification('error', 'Amount must be greater than zero');
+      addNotification("error", "Amount must be greater than zero");
       return false;
     }
 
     if (amount > walletState.balance) {
-      addNotification('error', 'Insufficient funds in admin wallet');
+      addNotification("error", "Insufficient funds in admin wallet");
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(userEmail)) {
-      addNotification('error', 'Invalid email format');
+      addNotification("error", "Invalid email format");
       return false;
     }
 
+    // TODO: Replace with actual API call for transfer
+    // For now, this will update local state but won't persist
     const newTransaction: Transaction = {
       id: uuidv4(),
       date: new Date(),
       userEmail,
       amount,
-      note: note || 'Transfer to user',
-      adminId: currentUser?.id || '1',
-      type: 'transfer'
+      note: note || "Transfer to user",
+      adminId: user?.user?.id || "1",
+      type: "transfer",
     };
 
-    setWalletState(prev => ({
+    setWalletState((prev) => ({
       balance: prev.balance - amount,
-      transactions: [newTransaction, ...prev.transactions]
+      transactions: [newTransaction, ...prev.transactions],
     }));
 
-    addNotification('success', `Successfully transferred $${amount.toFixed(2)} to ${userEmail}`);
+    addNotification(
+      "success",
+      `Successfully transferred $${amount.toFixed(2)} to ${userEmail}`
+    );
+
+    // Refresh from API to get updated data
+    setTimeout(() => refreshWallet(), 1000);
     return true;
   };
 
@@ -119,7 +189,17 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   };
 
   return (
-    <WalletContext.Provider value={{ walletState, depositFunds, transferFunds, getTransactionHistory }}>
+    <WalletContext.Provider
+      value={{
+        walletState,
+        depositFunds,
+        transferFunds,
+        getTransactionHistory,
+        isLoading,
+        error: apiError,
+        refreshWallet,
+      }}
+    >
       {children}
     </WalletContext.Provider>
   );

@@ -35,6 +35,7 @@ const authSlice = createSlice({
       state.userInfo = null;
       state.isAuthenticated = false;
       localStorage.removeItem("userInfo");
+      window.location.href = "/login";
     },
   },
 });

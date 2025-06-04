@@ -3,7 +3,7 @@ import { Settings, LogOut, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const Header = () => {
-  const { currentUser, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -53,7 +53,7 @@ const Header = () => {
             >
               <div className="flex items-center">
                 <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#06347C] to-[#0747a6] flex items-center justify-center text-white font-medium shadow-lg ring-2 ring-white">
-                  {currentUser && getInitials(currentUser.email)}
+                  {user && getInitials(user?.user?.email?.value)}
                 </div>
                 <ChevronDown
                   size={18}
@@ -72,7 +72,7 @@ const Header = () => {
                       Signed in as
                     </p>
                     <p className="text-sm text-gray-500 truncate">
-                      {currentUser?.email}
+                      {user?.user?.email?.value}
                     </p>
                   </div>
                   <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center group transition-colors duration-150">

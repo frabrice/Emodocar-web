@@ -45,4 +45,11 @@ export const api = apiSlice.injectEndpoints({
   }),
 });
 
-export const { useLazyWalletBalanceQuery } = api;
+export const {
+  useLazyWalletBalanceQuery,
+  useMakeDepositMutation,
+  useLazyTransactionHistoryQuery,
+  useTransferFundsMutation,
+  useLazyVerifyTransactionQuery,
+  useVerifyTransactionQuery,
+} = api;

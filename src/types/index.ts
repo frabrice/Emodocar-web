@@ -6,13 +6,14 @@ export interface User {
 }
 
 export interface Transaction {
-  id: string;
+  id?: string;
   date: Date;
   userEmail: string;
   amount: number;
   note: string;
-  adminId: string;
-  type: 'deposit' | 'transfer';
+  adminId?: string;
+  type: "deposit" | "transfer";
+  status?: "pending" | "completed" | "failed" | string;
 }
 
 export interface WalletState {
