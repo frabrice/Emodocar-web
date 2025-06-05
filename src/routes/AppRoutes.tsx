@@ -12,41 +12,13 @@ import Bookings from "@/components/dashboard/Bookings";
 import Login from "@/pages/Login";
 import { useAuth } from "@/context/AuthContext";
 import Layout from "@/components/dashboard/Layout";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
-
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  return children;
-};
-
-// Layout wrapper for public pages
-const PublicLayout = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-grow">{children}</main>
-      <Footer />
-    </div>
-  );
-};
+import PublicLayout from "@/components/layout/PublicLayout";
+import ProtectedRoute from "./ProtectedRoute";
 
 const AppRoutes = () => {
   const location = useLocation();
@@ -108,25 +80,31 @@ const AppRoutes = () => {
       <Route
         path="/dashboard"
         element={
-          <Layout>
-            <Dashboard />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Dashboard />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/vehicles"
         element={
-          <Layout>
-            <Vehicles />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Vehicles />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/bookings"
         element={
-          <Layout>
-            <Bookings />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Bookings />
+            </Layout>
+          </ProtectedRoute>
         }
       />
 

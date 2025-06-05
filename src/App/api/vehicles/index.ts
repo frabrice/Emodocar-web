@@ -19,7 +19,7 @@ export const api = apiSlice.injectEndpoints({
     // Delete car
     deleteVehicle: builder.mutation({
       query: (plate) => ({
-        url: `/vehicle/${plate}`,
+        url: `/admin/vehicle/${plate}`,
         method: "DELETE",
       }),
     }),

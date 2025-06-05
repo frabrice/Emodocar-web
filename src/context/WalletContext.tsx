@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
 import { Transaction, WalletState } from "../types";
@@ -95,10 +96,15 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
 
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // Load wallet data on mount
+  // Memoize refreshWallet to prevent infinite re-renders
+  const refreshWallet = useCallback(() => {
+    walletBalance(undefined);
+  }, [walletBalance]);
+
+  // Load wallet data on mount only
   useEffect(() => {
     refreshWallet();
-  }, []);
+  }, []); // Empty dependency array - only run on mount
 
   // Update local state when API data changes
   useEffect(() => {
@@ -115,7 +121,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     }
   }, [walletData]);
 
-  // Handle API errors
+  // Handle API errors - removed addNotification from dependencies
   useEffect(() => {
     if (error) {
       const errorMessage =
@@ -125,210 +131,208 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       setApiError(errorMessage);
       addNotification("error", errorMessage);
     }
-  }, [error, addNotification]);
+  }, [error]); // Removed addNotification from dependencies
 
-  const refreshWallet = () => {
-    walletBalance(undefined);
-  };
+  const verifyPayment = useCallback(
+    async (
+      tx_ref: string,
+      status: string,
+      transaction_id: string
+    ): Promise<boolean> => {
+      try {
+        const verificationResult = await verifyTransaction({
+          tx_ref,
+          status,
+          transaction_id,
+        }).unwrap();
 
-  const verifyPayment = async (
-    tx_ref: string,
-    status: string,
-    transaction_id: string
-  ): Promise<boolean> => {
-    try {
-      const verificationResult = await verifyTransaction({
-        tx_ref,
-        status,
-        transaction_id,
-      }).unwrap();
+        if (verificationResult.success || status === "successful") {
+          addNotification(
+            "success",
+            "Payment verified successfully! Your wallet has been updated."
+          );
 
-      if (verificationResult.success || status === "successful") {
-        addNotification(
-          "success",
-          "Payment verified successfully! Your wallet has been updated."
-        );
+          // Update local transaction status if we can find it
+          setWalletState((prev) => ({
+            ...prev,
+            transactions: prev.transactions.map((tx) =>
+              tx.note.includes(tx_ref) || tx.id === tx_ref
+                ? { ...tx, status: "completed" }
+                : tx
+            ),
+          }));
 
-        // Update local transaction status if we can find it
-        setWalletState((prev) => ({
-          ...prev,
-          transactions: prev.transactions.map((tx) =>
-            tx.note.includes(tx_ref) || tx.id === tx_ref
-              ? { ...tx, status: "completed" }
-              : tx
-          ),
-        }));
+          // Refresh wallet data to get updated balance
+          setTimeout(() => refreshWallet(), 1000);
+          return true;
+        } else {
+          addNotification(
+            "error",
+            "Payment verification failed. Please contact support if you believe this is an error."
+          );
+          return false;
+        }
+      } catch (error: any) {
+        console.error("Payment verification error:", error);
 
-        // Refresh wallet data to get updated balance
-        setTimeout(() => refreshWallet(), 1000);
-        return true;
-      } else {
-        addNotification(
-          "error",
-          "Payment verification failed. Please contact support if you believe this is an error."
-        );
+        let errorMessage = "Failed to verify payment";
+        if (error?.data?.message) {
+          errorMessage = error.data.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+
+        addNotification("error", errorMessage);
         return false;
       }
-    } catch (error: any) {
-      console.error("Payment verification error:", error);
+    },
+    [verifyTransaction, addNotification, refreshWallet]
+  );
 
-      let errorMessage = "Failed to verify payment";
-      if (error?.data?.message) {
-        errorMessage = error.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
+  const depositFunds = useCallback(
+    async (amount: number, currency: string = "RWF") => {
+      if (amount <= 0) {
+        addNotification("error", "Amount must be greater than zero");
+        return;
       }
 
-      addNotification("error", errorMessage);
-      return false;
-    }
-  };
+      try {
+        // Get current domain for redirect URL
+        const baseUrl = window.location.origin;
+        const redirectUrl = `${baseUrl}/dashboard`;
 
-  const depositFunds = async (amount: number, currency: string = "RWF") => {
-    if (amount <= 0) {
-      addNotification("error", "Amount must be greater than zero");
-      return;
-    }
+        const depositData = {
+          amount,
+          currency,
+          redirectUrl,
+        };
 
-    try {
-      // Get current domain for redirect URL
-      const baseUrl = window.location.origin;
-      const redirectUrl = `${baseUrl}/dashboard`;
+        const response = await makeDeposit(depositData).unwrap();
 
-      const depositData = {
-        amount,
-        currency,
-        redirectUrl,
-      };
+        // Check if response contains a payment link
+        if (response.link || response.paymentUrl || response.url) {
+          const paymentLink =
+            response.link || response.paymentUrl || response.url;
 
-      const response = await makeDeposit(depositData).unwrap();
+          // Open payment link in new tab
+          window.open(paymentLink, "_blank", "noopener,noreferrer");
 
-      // Check if response contains a payment link
-      if (response.link || response.paymentUrl || response.url) {
-        const paymentLink =
-          response.link || response.paymentUrl || response.url;
+          addNotification(
+            "success",
+            "Payment link opened. Complete your deposit in the new tab."
+          );
 
-        // Open payment link in new tab
-        window.open(paymentLink, "_blank", "noopener,noreferrer");
+          // Add pending transaction to local state
+          const newTransaction: Transaction = {
+            id: uuidv4(),
+            date: new Date(),
+            userEmail: user?.user?.email?.value || "admin@emodocar.com",
+            amount,
+            note: `Deposit of ${amount} ${currency}`,
+            adminId: user?.user?.id || "1",
+            type: "deposit",
+            status: "pending",
+          };
 
-        addNotification(
-          "success",
-          "Payment link opened. Complete your deposit in the new tab."
-        );
+          setWalletState((prev) => ({
+            ...prev, // Keep current balance since deposit is pending
+            transactions: [newTransaction, ...prev.transactions],
+          }));
 
-        // Add pending transaction to local state
+          // Refresh wallet data after a delay to check for updates
+          setTimeout(() => {
+            refreshWallet();
+          }, 2000);
+        } else {
+          addNotification("error", "Payment link not received from server");
+        }
+      } catch (error: any) {
+        console.error("Deposit error:", error);
+
+        let errorMessage = "Failed to initiate deposit";
+
+        if (error?.data?.message) {
+          errorMessage = error.data.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+
+        addNotification("error", errorMessage);
+      }
+    },
+    [makeDeposit, addNotification, user, refreshWallet]
+  );
+
+  const transferFunds = useCallback(
+    async (
+      userEmail: string,
+      amount: number,
+      note: string
+    ): Promise<boolean> => {
+      if (amount <= 0) {
+        addNotification("error", "Amount must be greater than zero");
+        return false;
+      }
+
+      if (amount > walletState.balance) {
+        addNotification("error", "Insufficient funds in admin wallet");
+        return false;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userEmail)) {
+        addNotification("error", "Invalid email format");
+        return false;
+      }
+
+      try {
+        // Create transaction record for local state
         const newTransaction: Transaction = {
           id: uuidv4(),
           date: new Date(),
-          userEmail: user?.user?.email?.value || "admin@emodocar.com",
+          userEmail,
           amount,
-          note: `Deposit of ${amount} ${currency}`,
+          note: note || "Transfer to user",
           adminId: user?.user?.id || "1",
-          type: "deposit",
-          status: "pending",
+          type: "transfer",
+          status: "completed",
         };
 
+        // Update local state
         setWalletState((prev) => ({
-          ...prev, // Keep current balance since deposit is pending
+          balance: prev.balance - amount,
           transactions: [newTransaction, ...prev.transactions],
         }));
 
-        // Refresh wallet data after a delay to check for updates
-        setTimeout(() => {
-          refreshWallet();
-        }, 2000);
-      } else {
-        addNotification("error", "Payment link not received from server");
+        addNotification(
+          "success",
+          `Successfully transferred $${amount.toFixed(2)} to ${userEmail}`
+        );
+
+        // Refresh wallet data to get updated balance from server
+        setTimeout(() => refreshWallet(), 1000);
+
+        return true;
+      } catch (error: any) {
+        console.error("Transfer error:", error);
+
+        let errorMessage = "Failed to transfer funds";
+        if (error?.data?.message) {
+          errorMessage = error.data.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+
+        addNotification("error", errorMessage);
+        return false;
       }
-    } catch (error: any) {
-      console.error("Deposit error:", error);
+    },
+    [walletState.balance, addNotification, user, refreshWallet]
+  );
 
-      let errorMessage = "Failed to initiate deposit";
-
-      if (error?.data?.message) {
-        errorMessage = error.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      addNotification("error", errorMessage);
-    }
-  };
-
-  const transferFunds = async (
-    userEmail: string,
-    amount: number,
-    note: string
-  ): Promise<boolean> => {
-    if (amount <= 0) {
-      addNotification("error", "Amount must be greater than zero");
-      return false;
-    }
-
-    if (amount > walletState.balance) {
-      addNotification("error", "Insufficient funds in admin wallet");
-      return false;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(userEmail)) {
-      addNotification("error", "Invalid email format");
-      return false;
-    }
-
-    try {
-      // // Prepare API request body
-      // const transferData = {
-      //   email: userEmail,
-      //   amount: amount,
-      //   remarks: note || "Transfer to user",
-      // };
-
-      // Create transaction record for local state
-      const newTransaction: Transaction = {
-        id: uuidv4(),
-        date: new Date(),
-        userEmail,
-        amount,
-        note: note || "Transfer to user",
-        adminId: user?.user?.id || "1",
-        type: "transfer",
-        status: "completed",
-      };
-
-      // Update local state
-      setWalletState((prev) => ({
-        balance: prev.balance - amount,
-        transactions: [newTransaction, ...prev.transactions],
-      }));
-
-      addNotification(
-        "success",
-        `Successfully transferred $${amount.toFixed(2)} to ${userEmail}`
-      );
-
-      // Refresh wallet data to get updated balance from server
-      setTimeout(() => refreshWallet(), 1000);
-
-      return true;
-    } catch (error: any) {
-      console.error("Transfer error:", error);
-
-      let errorMessage = "Failed to transfer funds";
-      if (error?.data?.message) {
-        errorMessage = error.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      addNotification("error", errorMessage);
-      return false;
-    }
-  };
-
-  const getTransactionHistory = () => {
+  const getTransactionHistory = useCallback(() => {
     return walletState.transactions;
-  };
+  }, [walletState.transactions]);
 
   return (
     <WalletContext.Provider

@@ -30,12 +30,13 @@ const Login = () => {
     } catch (error: any) {
       // Handle different types of errors
       let errorMessage = "Login failed. Please try again.";
+
       console.error("Login error:", error);
-      console.error("message", error?.data?.error);
-      addNotification("error", errorMessage);
+
+      // Check for specific error patterns
       if (error?.data?.error) {
         errorMessage = error.data.error;
-        addNotification("error", errorMessage);
+        console.error("API error message:", error.data.error);
       } else if (error?.message) {
         errorMessage = error.message;
       } else if (error?.status === 401) {
@@ -45,6 +46,8 @@ const Login = () => {
       } else if (error?.status >= 500) {
         errorMessage = "Server error. Please try again later.";
       }
+
+      // Only call addNotification once with the final error message
       addNotification("error", errorMessage);
     }
   };
