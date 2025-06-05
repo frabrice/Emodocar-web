@@ -1,16 +1,8 @@
-import React from "react";
-import {
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
-  useLocation,
-} from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "@/pages/Dashboard";
 import Vehicles from "@/pages/Vehicles";
 import Bookings from "@/components/dashboard/Bookings";
 import Login from "@/pages/Login";
-import { useAuth } from "@/context/AuthContext";
 import Layout from "@/components/dashboard/Layout";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
@@ -21,14 +13,6 @@ import PublicLayout from "@/components/layout/PublicLayout";
 import ProtectedRoute from "./ProtectedRoute";
 
 const AppRoutes = () => {
-  const location = useLocation();
-
-  // Check if we're on a dashboard route
-  const isDashboardRoute =
-    location.pathname.startsWith("/dashboard") ||
-    location.pathname.startsWith("/vehicles") ||
-    location.pathname.startsWith("/bookings");
-
   return (
     <Routes>
       {/* Public routes with layout */}

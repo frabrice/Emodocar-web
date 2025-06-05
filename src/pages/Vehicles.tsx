@@ -11,7 +11,7 @@ import {
   useListVehiclesMutation,
   useLazySearchByVehiclesByPlateNumberQuery,
   useDeleteVehicleMutation,
-} from "@/App/api/vehicles"
+} from "@/App/api/vehicles";
 
 // Updated Vehicle type to match API response
 interface Vehicle {
@@ -128,8 +128,22 @@ const Vehicles = () => {
 
     try {
       const response = await searchByPlate(search.trim()).unwrap();
-      // Assuming the search endpoint returns a single vehicle or array
-      const searchResults = Array.isArray(response) ? response : [response];
+
+      // Handle the different response structure from search endpoint
+      // Search returns { vehicle: {...} } instead of { vehicles: [...] }
+      let searchResults: Vehicle[] = [];
+
+      if (response && response.vehicle) {
+        // Single vehicle found
+        searchResults = [response.vehicle];
+      } else if (Array.isArray(response)) {
+        // If it returns an array directly
+        searchResults = response;
+      } else if (response && Array.isArray(response.vehicles)) {
+        // If it returns the same structure as list vehicles
+        searchResults = response.vehicles;
+      }
+
       setVehicles(searchResults);
       setPagination({
         page: 1,
@@ -149,7 +163,6 @@ const Vehicles = () => {
       });
     }
   };
-
   const handleDelete = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     setConfirmationMessage(
@@ -314,7 +327,8 @@ const Vehicles = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {vehicle?.client?.firstName} {vehicle?.client?.lastName}
+                          {vehicle?.client?.firstName}{" "}
+                          {vehicle?.client?.lastName}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div>
