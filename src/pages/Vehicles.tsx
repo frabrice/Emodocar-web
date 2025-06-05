@@ -110,13 +110,20 @@ const Vehicles = () => {
 
   const fetchVehicles = async (page: number) => {
     try {
+      // Convert 1-based frontend page to 0-based backend page
+      const backendPage = page - 1;
+
       const response = (await listVehicles({
-        page,
+        page: backendPage, // Send 0-based page to backend
         limit: itemsPerPage,
       }).unwrap()) as ApiResponse;
 
       setVehicles(response.vehicles);
-      setPagination(response.pagination);
+      // Keep pagination state as 1-based for frontend display
+      setPagination({
+        ...response.pagination,
+        page: page, // Use the frontend page number for display
+      });
     } catch (error) {
       console.error("Error fetching vehicles:", error);
       addNotification("error", "Failed to fetch vehicles");
@@ -163,6 +170,7 @@ const Vehicles = () => {
       });
     }
   };
+
   const handleDelete = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     setConfirmationMessage(
