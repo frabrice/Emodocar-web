@@ -98,13 +98,18 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
 
   // Memoize refreshWallet to prevent infinite re-renders
   const refreshWallet = useCallback(() => {
-    walletBalance(undefined);
-  }, [walletBalance]);
+    // Only call API if user and token exist
+    if (user?.token) {
+      walletBalance(undefined);
+    }
+  }, [walletBalance, user?.token]);
 
-  // Load wallet data on mount only
+  // Load wallet data only when user with token is available
   useEffect(() => {
-    refreshWallet();
-  }, []); // Empty dependency array - only run on mount
+    if (user?.token) {
+      refreshWallet();
+    }
+  }, [user?.token, refreshWallet]);
 
   // Update local state when API data changes
   useEffect(() => {
@@ -121,7 +126,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     }
   }, [walletData]);
 
-  // Handle API errors - removed addNotification from dependencies
+  // Handle API errors
   useEffect(() => {
     if (error) {
       const errorMessage =
@@ -131,7 +136,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       setApiError(errorMessage);
       addNotification("error", errorMessage);
     }
-  }, [error]); // Removed addNotification from dependencies
+  }, [error, addNotification]);
 
   const verifyPayment = useCallback(
     async (
@@ -139,6 +144,11 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       status: string,
       transaction_id: string
     ): Promise<boolean> => {
+      if (!user?.token) {
+        addNotification("error", "User authentication required");
+        return false;
+      }
+
       try {
         const verificationResult = await verifyTransaction({
           tx_ref,
@@ -186,11 +196,16 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
         return false;
       }
     },
-    [verifyTransaction, addNotification, refreshWallet]
+    [verifyTransaction, addNotification, refreshWallet, user?.token]
   );
 
   const depositFunds = useCallback(
     async (amount: number, currency: string = "RWF") => {
+      if (!user?.token) {
+        addNotification("error", "User authentication required");
+        return;
+      }
+
       if (amount <= 0) {
         addNotification("error", "Amount must be greater than zero");
         return;
@@ -269,6 +284,11 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       amount: number,
       note: string
     ): Promise<boolean> => {
+      if (!user?.token) {
+        addNotification("error", "User authentication required");
+        return false;
+      }
+
       if (amount <= 0) {
         addNotification("error", "Amount must be greater than zero");
         return false;
@@ -286,6 +306,15 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       }
 
       try {
+        // Call the actual API to transfer funds
+        const transferData = {
+          userEmail,
+          amount,
+          note: note || "Transfer to user",
+        };
+
+        await transferFundsApi(transferData).unwrap();
+
         // Create transaction record for local state
         const newTransaction: Transaction = {
           id: uuidv4(),
@@ -327,7 +356,13 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
         return false;
       }
     },
-    [walletState.balance, addNotification, user, refreshWallet]
+    [
+      walletState.balance,
+      addNotification,
+      user,
+      refreshWallet,
+      transferFundsApi,
+    ]
   );
 
   const getTransactionHistory = useCallback(() => {

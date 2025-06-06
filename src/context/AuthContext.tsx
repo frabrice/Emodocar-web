@@ -30,8 +30,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     (state: RootState) => state.auth
   );
 
-  console.log("AuthProvider userInfo:", userInfo);
-  console.log("AuthProvider isAuthenticated:", isAuthenticated);
 
   const logout = () => {
     dispatch(logOut());

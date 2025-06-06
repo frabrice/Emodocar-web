@@ -12,58 +12,7 @@ import {
   useLazySearchByVehiclesByPlateNumberQuery,
   useDeleteVehicleMutation,
 } from "@/App/api/vehicles";
-
-// Updated Vehicle type to match API response
-interface Vehicle {
-  plate: string;
-  brand: string;
-  model: string;
-  seats: number;
-  vehicleType: string;
-  transmission: string;
-  guaranteeFee: number;
-  price: number;
-  currency: string;
-  status: string;
-  images: Array<{
-    key: string;
-    isMain: boolean;
-    url: string;
-  }>;
-  location: {
-    province: {
-      id: number;
-      name: string;
-    };
-    district: {
-      id: number;
-      name: string;
-      provinceId: number;
-    };
-    lat: number;
-    lon: number;
-    mainArea: string;
-  };
-  reviews: {
-    count?: number;
-    avg?: number;
-  };
-  client: {
-    globalId?: string;
-    firstName?: string;
-    lastName?: string;
-  };
-}
-
-interface ApiResponse {
-  vehicles: Vehicle[];
-  pagination: {
-    page: number;
-    items: number;
-    totalItems: number;
-    totalPages: number;
-  };
-}
+import { ApiResponse, Vehicle } from "@/types/vehicle";
 
 const Vehicles = () => {
   const { addNotification } = useNotification();
@@ -192,9 +141,9 @@ const Vehicles = () => {
 
         setConfirmationMessage(null);
         setSelectedVehicle(null);
-      } catch (error) {
-        console.error("Error deleting vehicle:", error);
-        addNotification("error", "Failed to delete vehicle");
+      } catch (error: any) {
+        console.error("Error deleting vehicle:", error.data.message);
+        addNotification("error", error.data.message || "Failed to delete vehicle");
       }
     }
   };

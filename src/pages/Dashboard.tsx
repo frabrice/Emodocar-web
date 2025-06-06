@@ -4,7 +4,6 @@ import WalletOverview from "@/components/dashboard/WalletOverview";
 import DepositFunds from "@/components/dashboard/DepositFunds";
 import TransferFunds from "@/components/dashboard/TransferFunds";
 import TransactionHistory from "@/components/dashboard/TransactionHistory";
-import Bookings from "@/components/dashboard/Bookings";
 import { useWallet } from "@/context/WalletContext";
 import { useLazyVerifyTransactionQuery } from "@/App/api/company";
 import { useNotification } from "@/context/NotificationContext";
@@ -209,7 +208,6 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <Bookings />
         <TransferFunds />
         <TransactionHistory />
       </div>
