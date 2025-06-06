@@ -4,8 +4,8 @@ export const api = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // View wallet balance
     walletBalance: builder.query({
-      query: () => ({
-        url: "/wallet",
+      query: ({ page, limit }) => ({
+        url: `/wallet?page=${page}&limit=${limit}`,
         method: "GET",
       }),
     }),

@@ -17,6 +17,13 @@ import {
   useTransferFundsMutation,
 } from "@/App/api/company";
 
+interface PaginationInfo {
+  items: number;
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 interface WalletContextType {
   walletState: WalletState;
   depositFunds: (amount: number, currency?: string) => Promise<void>;
@@ -33,10 +40,12 @@ interface WalletContextType {
   ) => Promise<boolean>;
   isLoading: boolean;
   error: string | null;
-  refreshWallet: () => void;
+  refreshWallet: (page?: number, limit?: number) => void;
   isDepositLoading: boolean;
   isVerifyingPayment: boolean;
   isTransferLoading: boolean;
+  pagination: PaginationInfo | null;
+  loadPage: (page: number, limit?: number) => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -58,7 +67,7 @@ const transformApiHistoryToTransactions = (
   apiHistory: any[]
 ): Transaction[] => {
   return apiHistory.map((item) => ({
-    id: uuidv4(), // Generate unique ID since API doesn't provide one
+    id: uuidv4(),
     date: new Date(item.createdAt),
     userEmail: "N/A",
     amount: item.amount,
@@ -94,26 +103,44 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     transactions: [],
   });
 
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [currentLimit, setCurrentLimit] = useState(5);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  // Load page function
+  const loadPage = useCallback(
+    (page: number, limit: number = 5) => {
+      if (user?.token) {
+        setCurrentPage(page);
+        setCurrentLimit(limit);
+        walletBalance({ page, limit });
+      }
+    },
+    [walletBalance, user?.token]
+  );
+
   // Memoize refreshWallet to prevent infinite re-renders
-  const refreshWallet = useCallback(() => {
-    // Only call API if user and token exist
-    if (user?.token) {
-      walletBalance(undefined);
-    }
-  }, [walletBalance, user?.token]);
+  const refreshWallet = useCallback(
+    (page: number = currentPage, limit: number = currentLimit) => {
+      // Only call API if user and token exist
+      if (user?.token) {
+        walletBalance({ page, limit });
+      }
+    },
+    [walletBalance, user?.token, currentPage, currentLimit]
+  );
 
   // Load wallet data only when user with token is available
   useEffect(() => {
     if (user?.token) {
-      refreshWallet();
+      refreshWallet(0, 5); // Start with first page, 10 items
     }
-  }, [user?.token, refreshWallet]);
+  }, [user?.token]);
 
   // Update local state when API data changes
   useEffect(() => {
-    if (walletData?.wallet) {
+    if (walletData?.wallet && walletData?.pagination) {
       const transformedTransactions = transformApiHistoryToTransactions(
         walletData.wallet.history || []
       );
@@ -122,6 +149,9 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
         balance: walletData.wallet.balance || 0,
         transactions: transformedTransactions,
       });
+
+      // Update pagination info
+      setPagination(walletData.pagination);
       setApiError(null);
     }
   }, [walletData]);
@@ -237,22 +267,27 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
             "Payment link opened. Complete your deposit in the new tab."
           );
 
-          // Add pending transaction to local state
-          const newTransaction: Transaction = {
-            id: uuidv4(),
-            date: new Date(),
-            userEmail: user?.user?.email?.value || "admin@emodocar.com",
-            amount,
-            note: `Deposit of ${amount} ${currency}`,
-            adminId: user?.user?.id || "1",
-            type: "deposit",
-            status: "pending",
-          };
+          // Add pending transaction to local state if we're on the first page
+          if (currentPage === 0) {
+            const newTransaction: Transaction = {
+              id: uuidv4(),
+              date: new Date(),
+              userEmail: user?.user?.email?.value || "admin@emodocar.com",
+              amount,
+              note: `Deposit of ${amount} ${currency}`,
+              adminId: user?.user?.id || "1",
+              type: "deposit",
+              status: "pending",
+            };
 
-          setWalletState((prev) => ({
-            ...prev, // Keep current balance since deposit is pending
-            transactions: [newTransaction, ...prev.transactions],
-          }));
+            setWalletState((prev) => ({
+              ...prev, // Keep current balance since deposit is pending
+              transactions: [
+                newTransaction,
+                ...prev.transactions.slice(0, currentLimit - 1),
+              ],
+            }));
+          }
 
           // Refresh wallet data after a delay to check for updates
           setTimeout(() => {
@@ -275,7 +310,14 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
         addNotification("error", errorMessage);
       }
     },
-    [makeDeposit, addNotification, user, refreshWallet]
+    [
+      makeDeposit,
+      addNotification,
+      user,
+      refreshWallet,
+      currentPage,
+      currentLimit,
+    ]
   );
 
   const transferFunds = useCallback(
@@ -315,27 +357,32 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
 
         await transferFundsApi(transferData).unwrap();
 
-        // Create transaction record for local state
-        const newTransaction: Transaction = {
-          id: uuidv4(),
-          date: new Date(),
-          userEmail,
-          amount,
-          note: note || "Transfer to user",
-          adminId: user?.user?.id || "1",
-          type: "transfer",
-          status: "completed",
-        };
+        // Create transaction record for local state if we're on the first page
+        if (currentPage === 0) {
+          const newTransaction: Transaction = {
+            id: uuidv4(),
+            date: new Date(),
+            userEmail,
+            amount,
+            note: note || "Transfer to user",
+            adminId: user?.user?.id || "1",
+            type: "transfer",
+            status: "completed",
+          };
 
-        // Update local state
-        setWalletState((prev) => ({
-          balance: prev.balance - amount,
-          transactions: [newTransaction, ...prev.transactions],
-        }));
+          // Update local state
+          setWalletState((prev) => ({
+            balance: prev.balance - amount,
+            transactions: [
+              newTransaction,
+              ...prev.transactions.slice(0, currentLimit - 1),
+            ],
+          }));
+        }
 
         addNotification(
           "success",
-          `Successfully transferred $${amount.toFixed(2)} to ${userEmail}`
+          `Successfully transferred ${amount.toFixed(2)} to ${userEmail}`
         );
 
         // Refresh wallet data to get updated balance from server
@@ -362,6 +409,8 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       user,
       refreshWallet,
       transferFundsApi,
+      currentPage,
+      currentLimit,
     ]
   );
 
@@ -383,9 +432,12 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
         isDepositLoading,
         isVerifyingPayment,
         isTransferLoading,
+        pagination,
+        loadPage,
       }}
     >
       {children}
     </WalletContext.Provider>
   );
 };
+export default WalletContext;

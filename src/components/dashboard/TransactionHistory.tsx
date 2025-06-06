@@ -5,13 +5,21 @@ import {
   ArrowUp,
   RefreshCw,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 import { Transaction } from "@/types";
 
 const TransactionHistory = () => {
-  const { getTransactionHistory, isLoading, error, refreshWallet } =
-    useWallet();
+  const {
+    getTransactionHistory,
+    isLoading,
+    error,
+    refreshWallet,
+    pagination,
+    loadPage,
+  } = useWallet();
   const transactions = getTransactionHistory();
 
   const [sortField, setSortField] = useState<keyof Transaction>("date");
@@ -24,6 +32,14 @@ const TransactionHistory = () => {
       setSortField(field);
       setSortDirection("desc");
     }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    loadPage(newPage, pagination?.items || 5);
+  };
+
+  const handleItemsPerPageChange = (newLimit: number) => {
+    loadPage(0, newLimit); // Reset to first page when changing items per page
   };
 
   const sortedTransactions = [...transactions].sort((a, b) => {
@@ -106,6 +122,116 @@ const TransactionHistory = () => {
     );
   };
 
+  // Pagination component
+  const PaginationControls = () => {
+    if (!pagination || pagination.totalPages <= 0) return null;
+
+    const { page, totalPages, total, items } = pagination;
+    const itemsPerPage = items || 6;
+    const startItem = page * itemsPerPage + 1;
+    const endItem = Math.min(startItem + transactions.length - 1, total);
+
+    return (
+      <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div className="flex-1 flex justify-between sm:hidden">
+          <button
+            onClick={() => handlePageChange(page - 1)}
+            disabled={page === 0}
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => handlePageChange(page + 1)}
+            disabled={page >= totalPages - 1}
+            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div className="flex items-center space-x-4">
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{startItem}</span> to{" "}
+              <span className="font-medium">{endItem}</span> of{" "}
+              <span className="font-medium">{total}</span> results
+            </p>
+            <div className="flex items-center space-x-2">
+              <label htmlFor="itemsPerPage" className="text-sm text-gray-700">
+                Items per page:
+              </label>
+              <select
+                id="itemsPerPage"
+                value={itemsPerPage}
+                onChange={(e) =>
+                  handleItemsPerPageChange(Number(e.target.value))
+                }
+                className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#06347C] focus:border-transparent"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <nav
+              className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+              aria-label="Pagination"
+            >
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 0}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="sr-only">Previous</span>
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+
+              {/* Page numbers */}
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i;
+                } else if (page < 3) {
+                  pageNum = i;
+                } else if (page >= totalPages - 3) {
+                  pageNum = totalPages - 5 + i;
+                } else {
+                  pageNum = page - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                      pageNum === page
+                        ? "z-10 bg-[#06347C] border-[#06347C] text-white"
+                        : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    {pageNum + 1}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages - 1}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="sr-only">Next</span>
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
       <div className="p-6">
@@ -115,7 +241,7 @@ const TransactionHistory = () => {
           </h2>
           <div className="flex gap-2">
             <button
-              onClick={refreshWallet}
+              onClick={() => refreshWallet()}
               disabled={isLoading}
               className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#06347C] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -147,7 +273,7 @@ const TransactionHistory = () => {
                 </h3>
                 <p className="text-sm text-red-700 mt-1">{error}</p>
                 <button
-                  onClick={refreshWallet}
+                  onClick={() => refreshWallet()}
                   className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
                 >
                   Try again
@@ -310,6 +436,9 @@ const TransactionHistory = () => {
             </table>
           </div>
         )}
+
+        {/* Pagination Controls */}
+        <PaginationControls />
       </div>
     </div>
   );
